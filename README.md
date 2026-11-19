@@ -464,7 +464,9 @@ Notes:
 - Tenant keys come from your shell environment or a local `.env`; defaults are
   placeholders.
 
-**Verification status:** see §9.
+**Verification status:** see §9. The image build and the `api-only` path are
+verified; the full `compose up` path that starts its own Ollama container is
+not, because an Ollama runtime already existed on this machine.
 
 ---
 
@@ -522,7 +524,7 @@ I used does not support CUDA or QLoRA.
 | Default test suite | <!--TESTS-->**VERIFIED.** `184 passed, 9 deselected` in 10.81 s (`pytest -q`, 19 Nov 2026). 0 failed, 0 skipped. 98% statement coverage of `app/`.<!--/TESTS--> |
 | Live Ollama integration (`-m ollama`) | <!--OLLAMA-->**VERIFIED.** `6 passed, 187 deselected` in 27.4 s (`pytest -m ollama -v`, 19 Nov 2026) against a real local `qwen3:0.6b` (522 MB, Q4_K_M) served by Ollama in a container on `127.0.0.1:11434`. `/health` reported `execution: local`, `model_available: true`. A live `/ask` returned a grounded answer citing `a-policy-2` and `a-ticket-1` with `a-policy-1` listed in `superseded_excluded`; a live cross-tenant canary request abstained with zero sources and zero canary occurrences in the response body.<!--/OLLAMA--> |
 | Live OpenAI-compatible integration (`-m openai`) | **NOT RUN** — no API key was configured; tests skip by design |
-| Docker compose stack | <!--DOCKER-->**NOT VERIFIED.** I started the image build and `compose up`, then cancelled both: they were pulling the same ~3.2 GB `ollama/ollama` image I was already downloading in another terminal, and the two were competing for bandwidth. The `compose.yaml` and `Dockerfile` do validate (`docker compose config` passes for both profiles), but I have not run the stack end to end. Treat section 7 as untested.<!--/DOCKER--> |
+| Docker compose stack | <!--DOCKER-->**VERIFIED (image + api-only path).** `docker build` produces a 269 MB image that starts healthy and runs as non-root (`uid=10001 aegis`). Verified on 19 Nov 2026 against the host Ollama via `host.docker.internal:11434`: `/health` reported `execution: local`, `model_available: true`; `/ask` without a key returned 401; a cross-tenant canary request abstained with zero sources and zero canary occurrences; the tenant B retention query returned `conflict: true` with both records as evidence. `docker compose config` validates for both profiles. **Not verified:** the full `docker compose up` path that starts its own Ollama container -- an Ollama runtime already existed on this machine and starting a second one was deliberately avoided.<!--/DOCKER--> |
 | LoRA training | <!--LORA-->**EXECUTED.** LoRA on `Qwen/Qwen2.5-0.5B-Instruct`, 3 epochs / 108 steps, mean loss 0.4564 -> 0.0633 -> 0.0053, 28.5 min on CPU, seed 20261119. **Plain LoRA in fp32, not QLoRA** -- this machine has no CUDA GPU.<!--/LORA--> |
 | LoRA evaluation | <!--LORAEVAL-->**MEASURED** on the 24 held-out examples. behaviour_accuracy 0.2500 -> 1.0000; citation_accuracy 0.0000 -> 1.0000; 0 canary leaks on both sides. The base model emitted no citation in 24 attempts, so the gain is the citation protocol being learned. The perfect adapted scores indicate memorisation of a templated corpus -- caveats in [finetuning/README.md](finetuning/README.md).<!--/LORAEVAL--> |
 | Demo recording | **Recorded and submitted.** A 3–5 minute walkthrough covering the API, grounded answers with source evidence, blocked cross-tenant injection and the test run was recorded and sent to CSPRO with this submission on 19 November 2026. It is shared directly rather than hosted in this repository. |

@@ -36,7 +36,12 @@ The API must already be running.
 .\.venv\Scripts\streamlit.exe run ui/app.py
 ```
 
-Opens on <http://localhost:8501>.
+Opens on <http://127.0.0.1:8501>.
+
+`.streamlit/config.toml` in the repository root pins three defaults that
+matter: the server binds **loopback only** (Streamlit's own default binds every
+interface, which would expose a console holding tenant API keys to the LAN),
+telemetry is off, and tracebacks are not rendered into the browser.
 
 Point it at a different API with `AEGISRAG_API_URL`, and pre-fill the keys with
 `TENANT_A_API_KEY` / `TENANT_B_API_KEY`:

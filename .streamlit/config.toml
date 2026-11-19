@@ -1,0 +1,19 @@
+# Defaults for the optional console in ui/. Applied automatically when
+# `streamlit run ui/app.py` is started from the repository root.
+
+[server]
+# Loopback only. Streamlit's default binds every interface, which would put a
+# console holding tenant API keys on the LAN -- and, behind a router that
+# forwards the port, on the public internet. This is a local developer tool.
+address = "127.0.0.1"
+port = 8501
+headless = true
+
+[browser]
+# No telemetry. This is a security assessment on a managed corporate machine;
+# usage statistics should not leave it.
+gatherUsageStats = false
+
+[client]
+# Show errors in the console rather than leaking tracebacks into the browser.
+showErrorDetails = false
