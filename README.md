@@ -523,8 +523,8 @@ I used does not support CUDA or QLoRA.
 | Live Ollama integration (`-m ollama`) | <!--OLLAMA-->pending<!--/OLLAMA--> |
 | Live OpenAI-compatible integration (`-m openai`) | **NOT RUN** — no API key was configured; tests skip by design |
 | Docker compose stack | <!--DOCKER-->**NOT VERIFIED.** I started the image build and `compose up`, then cancelled both: they were pulling the same ~3.2 GB `ollama/ollama` image I was already downloading in another terminal, and the two were competing for bandwidth. The `compose.yaml` and `Dockerfile` do validate (`docker compose config` passes for both profiles), but I have not run the stack end to end. Treat section 7 as untested.<!--/DOCKER--> |
-| LoRA training | <!--LORA-->pending<!--/LORA--> |
-| LoRA evaluation | <!--LORAEVAL-->pending<!--/LORAEVAL--> |
+| LoRA training | <!--LORA-->**EXECUTED.** LoRA on `Qwen/Qwen2.5-0.5B-Instruct`, 3 epochs / 108 steps, mean loss 0.4564 -> 0.0633 -> 0.0053, 28.5 min on CPU, seed 20261119. **Plain LoRA in fp32, not QLoRA** -- this machine has no CUDA GPU.<!--/LORA--> |
+| LoRA evaluation | <!--LORAEVAL-->**MEASURED** on the 24 held-out examples. behaviour_accuracy 0.2500 -> 1.0000; citation_accuracy 0.0000 -> 1.0000; 0 canary leaks on both sides. The base model emitted no citation in 24 attempts, so the gain is the citation protocol being learned. The perfect adapted scores indicate memorisation of a templated corpus -- caveats in [finetuning/README.md](finetuning/README.md).<!--/LORAEVAL--> |
 | Demo recording | **Recorded and submitted.** A 3–5 minute walkthrough covering the API, grounded answers with source evidence, blocked cross-tenant injection and the test run was recorded and sent to CSPRO with this submission on 19 November 2026. It is shared directly rather than hosted in this repository. |
 
 ---

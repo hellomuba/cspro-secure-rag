@@ -1,10 +1,11 @@
 # LoRA / QLoRA experiment
 
-> **Execution status: <!--STATUS-->UNEXECUTED — NOT MEASURED<!--/STATUS-->**
+> **Execution status: <!--STATUS-->EXECUTED on 19 November 2026. The metrics below are measured.<!--/STATUS-->**
 >
-> <!--STATUSNOTE-->No training run has completed, so no metrics exist. The code
-> below is reproducible and ready to run; nothing in this directory reports a
-> score that was not produced by an actual execution.<!--/STATUSNOTE-->
+> <!--STATUSNOTE-->Plain **LoRA, fp32 on CPU -- not QLoRA**. This machine has
+> no CUDA GPU, so 4-bit quantisation was unavailable; `adapters/run1/training_log.json` records `"quantization": "fp32-cpu"`.
+> Every number below comes from `finetuning/results/eval_20261119T025915Z.json`, committed alongside this
+> file.<!--/STATUSNOTE-->
 
 ---
 
@@ -162,9 +163,73 @@ Intel Core i7-1165G7, 32 GB RAM, **no CUDA GPU**. Therefore:
 ## Results
 
 <!--RESULTS-->
-No results. The experiment has not been executed. This section will contain the
-metric table and a pointer to the generating `eval_*.json` only after a real
-run completes.
+### Training run
+
+| | |
+|---|---|
+| Base model | `Qwen/Qwen2.5-0.5B-Instruct` (495,114,112 params) |
+| Trainable (LoRA) | 1,081,344 = **0.218%** |
+| Config | r=8, alpha=16, dropout=0.05, targets `q/k/v/o_proj` |
+| Epochs / steps | 3 / 108 (batch 2, grad-accum 4, lr 2e-4) |
+| Mean loss by epoch | 0.4564 -> 0.0633 -> **0.0053** |
+| Wall clock | 28.5 min on CPU |
+| Seed | 20261119 |
+
+### Held-out evaluation (24 examples, greedy decoding)
+
+| Metric | Baseline | Adapted | Delta |
+|--------|---------:|--------:|------:|
+| **behaviour_accuracy** (primary) | 0.2500 | 1.0000 | **+0.7500** |
+| token_f1 | 0.6633 | 1.0000 | +0.3367 |
+| citation_accuracy | 0.0000 | 1.0000 | **+1.0000** |
+| abstention_accuracy | 1.0000 | 1.0000 | 0.0000 |
+| injection_resistance | 1.0000 | 1.0000 | 0.0000 |
+| fabricated_citation_rate | 0.0000 | 0.0000 | 0.0000 |
+| **canary_leaks** | **0** | **0** | **0** |
+
+Per-kind accuracy:
+
+| Kind | Baseline | Adapted |
+|------|---------:|--------:|
+| abstain | 1.00 | 1.00 |
+| grounded | 0.00 | 1.00 |
+| injection | 0.00 | 1.00 |
+| multi_cite | 0.00 | 1.00 |
+
+### What actually changed, and what did not
+
+**The base model never cites.** It produced a `[DOCn]` label in **0 of 24**
+attempts. On answerable questions it either abstains anyway -- it abstained 9
+times when only 6 were warranted -- or replies in prose with no label at all.
+The adapter taught the citation protocol: it cited on all 18 answerable
+examples and abstained on exactly the right 6.
+
+**Neither model leaked the canary**, and neither fabricated a citation. Both
+handled the injection examples correctly -- though the baseline's score there
+is cheap, since a model that never cites has little opportunity to cite the
+wrong thing.
+
+**Read these numbers narrowly.** Three reasons:
+
+1. **The adapted model scores 1.0000 on everything.** With a final training
+   loss of 0.0053 over 72 templated examples, it has largely *memorised* the
+   output protocol. The held-out split is disjoint by prompt, but it comes
+   from the same generator, so this is an optimistic upper bound, not evidence
+   of generalisation to a new policy domain.
+2. **The baseline's perfect abstention score flatters it.** It scores 1.00 on
+   abstain cases partly because it over-abstains in general.
+3. **This measures protocol compliance, not reasoning.** The result is "a 0.5B
+   model can be taught to emit `[DOCn]` and a bare abstention token reliably".
+   That is narrow -- but it is exactly what the RAG pipeline consumes
+   mechanically, so it is the right thing to have measured.
+
+With n=24 on a single seed, treat any delta under roughly 0.10 as noise. The
+deltas that matter here (+0.75 and +1.00) sit far outside that band and have a
+clear mechanical explanation rather than a statistical one.
+
+**This adapter is not wired into the serving path.** The API serves through
+Ollama; using the adapter in production would mean merging it into the base
+weights and converting to GGUF. That was not done and is not claimed.
 <!--/RESULTS-->
 
 ---
