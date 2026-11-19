@@ -40,7 +40,7 @@ def test_default_provider_is_local_ollama_with_the_assessment_model():
     assert isinstance(provider, OllamaProvider)
     assert provider.name == "ollama"
     assert provider.execution == "local"
-    assert provider.model == "qwen2.5:1.5b-instruct"
+    assert provider.model == "qwen3:0.6b"
     assert provider.base_url == "http://localhost:11434"
     provider.close()
 

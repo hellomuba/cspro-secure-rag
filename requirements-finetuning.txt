@@ -1,0 +1,22 @@
+# Optional dependencies for the LoRA/QLoRA experiment only.
+# Deliberately separate from requirements.txt: the API has no dependency on
+# PyTorch, and an assessor who only wants to run the service should not have to
+# download ~200 MB of wheels.
+#
+#   pip install -r requirements-finetuning.txt
+#
+# CPU-only PyTorch (the case on the development machine for this project).
+# For a CUDA build, install torch from the matching PyTorch index first, e.g.
+#   pip install torch --index-url https://download.pytorch.org/whl/cu124
+--extra-index-url https://download.pytorch.org/whl/cpu
+
+torch==2.9.1+cpu
+transformers==4.57.1
+peft==0.17.1
+accelerate==1.10.1
+psutil==7.0.0
+
+# QLoRA (4-bit) additionally requires a CUDA GPU and:
+#   pip install bitsandbytes
+# train_lora.py falls back to plain LoRA when it is absent and records which
+# path ran in training_log.json.

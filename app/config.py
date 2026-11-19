@@ -90,7 +90,7 @@ class Settings(BaseSettings):
         if self.llm_model:
             return self.llm_model
         return {
-            "ollama": "qwen2.5:1.5b-instruct",
+            "ollama": "qwen3:0.6b",
             "openai": "gpt-4o-mini",
         }[self.llm_provider]
 

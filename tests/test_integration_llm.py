@@ -30,7 +30,7 @@ from app.main import create_app
 from tests.conftest import CANARY, SEED_PATH, TENANT_A_KEY, TENANT_B_KEY
 
 OLLAMA_URL = os.environ.get("LLM_BASE_URL") or "http://localhost:11434"
-OLLAMA_MODEL = os.environ.get("LLM_MODEL") or "qwen2.5:1.5b-instruct"
+OLLAMA_MODEL = os.environ.get("LLM_MODEL") or "qwen3:0.6b"
 
 OPENAI_URL = os.environ.get("OPENAI_TEST_BASE_URL") or "https://api.openai.com/v1"
 OPENAI_MODEL = os.environ.get("OPENAI_TEST_MODEL") or "gpt-4o-mini"

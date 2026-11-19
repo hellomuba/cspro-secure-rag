@@ -1,0 +1,82 @@
+# Optional containerised deployment. The native Windows workflow in README.md
+# remains fully supported and is what the assessment demo uses.
+#
+#   docker compose up -d --build
+#   docker compose exec ollama ollama pull qwen3:0.6b
+#   curl http://localhost:8000/health
+#
+# CPU-only by design: no GPU reservation is declared, so this runs on Docker
+# Desktop for Windows with the WSL2 backend without extra configuration.
+
+services:
+  ollama:
+    image: ollama/ollama:latest
+    # NOT named `aegisrag-ollama`: that name is commonly used for a standalone
+    # `docker run` Ollama container. Colliding with it would make compose fail
+    # to start, or fight over the model volume. If you already run a standalone
+    # Ollama on 127.0.0.1:11434, skip compose entirely and use the native
+    # workflow in README section 5 -- it talks to localhost:11434 directly.
+    container_name: aegisrag-compose-ollama
+    restart: unless-stopped
+    # Deliberately no `ports:` mapping. Ollama is reachable only from the
+    # private compose network, as http://ollama:11434. Publishing it would put
+    # an unauthenticated model runtime on the host interface.
+    expose:
+      - "11434"
+    volumes:
+      - ollama-models:/root/.ollama
+    networks:
+      - aegisrag
+    environment:
+      OLLAMA_KEEP_ALIVE: "10m"
+      # Bind inside the container only; the compose network still reaches it.
+      OLLAMA_HOST: "0.0.0.0:11434"
+    healthcheck:
+      # The official image ships the `ollama` CLI but not curl.
+      test: ["CMD-SHELL", "ollama list >/dev/null 2>&1 || exit 1"]
+      interval: 15s
+      timeout: 10s
+      start_period: 30s
+      retries: 10
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: aegisrag-compose-api
+    restart: unless-stopped
+    depends_on:
+      ollama:
+        condition: service_healthy
+    ports:
+      # Bound to loopback: reachable from this machine only.
+      - "127.0.0.1:8000:8000"
+    networks:
+      - aegisrag
+    environment:
+      LLM_PROVIDER: ollama
+      LLM_BASE_URL: http://ollama:11434
+      LLM_MODEL: ${LLM_MODEL:-qwen3:0.6b}
+      LLM_TIMEOUT_SECONDS: ${LLM_TIMEOUT_SECONDS:-120}
+      # Override these in a local .env file; never commit real values.
+      TENANT_A_API_KEY: ${TENANT_A_API_KEY:-dev-a-change-me-0000000000}
+      TENANT_B_API_KEY: ${TENANT_B_API_KEY:-dev-b-change-me-1111111111}
+      DB_PATH: /data/aegisrag.sqlite3
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+    volumes:
+      - api-data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8000/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      start_period: 20s
+      retries: 5
+
+volumes:
+  ollama-models:
+    # Named volume so a pulled model survives `docker compose down`.
+  api-data:
+
+networks:
+  aegisrag:
+    driver: bridge
