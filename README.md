@@ -464,10 +464,10 @@ Anything not listed here has not been run.
 
 | Item | Status |
 |------|--------|
-| Default test suite | <!--TESTS-->pending<!--/TESTS--> |
+| Default test suite | <!--TESTS-->**VERIFIED.** `175 passed, 9 deselected` in 23.1 s (`pytest -q`, 2026-11-19). 0 failed, 0 skipped.<!--/TESTS--> |
 | Live Ollama integration (`-m ollama`) | <!--OLLAMA-->pending<!--/OLLAMA--> |
 | Live OpenAI-compatible integration (`-m openai`) | **NOT RUN** — no API key was configured; tests skip by design |
-| Docker compose stack | <!--DOCKER-->pending<!--/DOCKER--> |
+| Docker compose stack | <!--DOCKER-->**NOT VERIFIED.** The image build and `compose up` were started and then deliberately cancelled: they were pulling the same ~3.2 GB `ollama/ollama` image the maintainer was already downloading, and competing for bandwidth. The files are provided but the stack has not been run end to end. Treat section 7 as untested until someone runs it.<!--/DOCKER--> |
 | LoRA training | <!--LORA-->pending<!--/LORA--> |
 | LoRA evaluation | <!--LORAEVAL-->pending<!--/LORAEVAL--> |
 | Demo recording | **NOT PRODUCED.** [docs/DEMO_SCRIPT.md](docs/DEMO_SCRIPT.md) is the script to follow; no recording exists. |

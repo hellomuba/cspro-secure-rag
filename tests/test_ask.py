@@ -178,6 +178,62 @@ def test_contradictory_current_policies_flag_conflict_and_abstain(make_client, a
     assert any(f.startswith("policy_conflict:retention") for f in body["security_flags"])
 
 
+def test_when_every_match_is_superseded_the_system_abstains(make_client, auth_a):
+    """Outdated evidence is not a weaker answer -- it is no answer."""
+    llm = FakeLLM(["this must never be produced"])
+    with make_client(llm) as client:
+        client.post(
+            "/ingest",
+            json={
+                "records": [
+                    {
+                        "id": "a-widget-old",
+                        "title": "Widget calibration policy",
+                        "body": "Fictional Tenant A: widget calibration ran nightly.",
+                        "topic": "widgets",
+                        "version": 1,
+                        "is_current": False,
+                    }
+                ]
+            },
+            headers=auth_a,
+        )
+        body = ask(client, auth_a, "What is the widget calibration policy?", top_k=5).json()
+
+    assert body["abstained"] is True
+    assert body["status"] == AnswerStatus.ABSTAINED_NO_EVIDENCE
+    assert body["sources"] == []
+    assert [s["id"] for s in body["superseded_excluded"]] == ["a-widget-old"]
+    assert llm.calls == [], "no authoritative evidence means no inference"
+
+
+def test_long_record_excerpts_are_windowed_around_the_match(make_client, auth_a):
+    filler = "Background narrative that is not relevant to the question. " * 12
+    body_text = (
+        f"{filler}Fictional Tenant A: sprocket inspections require two signatures. {filler}"
+    )
+    with make_client(FakeLLM(["Two signatures are required [DOC1]."])) as client:
+        client.post(
+            "/ingest",
+            json={
+                "records": [
+                    {
+                        "id": "a-sprocket",
+                        "title": "Sprocket inspection policy",
+                        "body": body_text,
+                        "topic": "sprockets",
+                    }
+                ]
+            },
+            headers=auth_a,
+        )
+        body = ask(client, auth_a, "What do sprocket inspections require?", top_k=5).json()
+
+    excerpt = body["sources"][0]["excerpt"]
+    assert len(excerpt) < len(body_text), "the excerpt is a window, not the whole record"
+    assert excerpt.startswith("... ") and excerpt.endswith(" ...")
+
+
 def test_no_false_conflict_for_a_single_current_policy(make_client, auth_a):
     with make_client(FakeLLM(["Thirty days [DOC1]."])) as client:
         body = ask(client, auth_a, RETENTION_Q, top_k=5).json()

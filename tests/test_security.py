@@ -259,6 +259,79 @@ def test_model_supplied_record_ids_are_not_treated_as_citations(make_client, aut
     assert all(s["tenant_id"] == "tenant-a" for s in body["sources"])
 
 
+def test_output_with_only_fabricated_labels_is_flagged(make_client, auth_a):
+    """Every cited label is invalid: nothing usable survives the label map."""
+    llm = FakeLLM(["Idempotency keys are required [DOC42][DOC43]."])
+    with make_client(llm) as client:
+        body = ask(client, auth_a, "What is the current import retry policy?").json()
+
+    assert "fabricated_citation_dropped" in body["security_flags"]
+    assert "no_valid_citation_in_output" in body["security_flags"]
+    assert "DOC42" not in body["answer"] and "DOC43" not in body["answer"]
+    # Sources fall back to the authorized hit set, never to the invented ones.
+    assert body["sources"]
+    assert all(s["tenant_id"] == "tenant-a" for s in body["sources"])
+
+
+def test_answer_that_is_nothing_but_a_fake_citation_abstains(make_client, auth_a):
+    with make_client(FakeLLM(["[DOC77]"])) as client:
+        body = ask(client, auth_a, "What is the current import retry policy?").json()
+
+    assert body["abstained"] is True
+    assert body["status"] == AnswerStatus.ABSTAINED_UNGROUNDED
+    assert body["sources"] == []
+
+
+def test_final_response_guard_blocks_a_marker_that_slipped_through():
+    """Belt-and-braces: the last check does not depend on the earlier ones.
+
+    Exercised directly because the grounding layer already blocks every route
+    that could reach it -- which is exactly why it needs its own test.
+    """
+    from app.config import Settings
+    from app.schemas import AskResponse, SourceOut
+    from app.service import AskService
+
+    service = AskService(
+        store=None,  # type: ignore[arg-type]
+        llm=None,  # type: ignore[arg-type]
+        settings=Settings(
+            tenant_a_api_key="a" * 20,
+            tenant_b_api_key="b" * 20,
+            _env_file=None,  # type: ignore[call-arg]
+        ),
+    )
+    smuggled = AskResponse(
+        answer="an answer that passed every earlier check",
+        abstained=False,
+        conflict=False,
+        status=AnswerStatus.ANSWERED,
+        sources=[
+            SourceOut(
+                id="a-policy-2",
+                tenant_id="tenant-a",
+                title="Import policy v2",
+                topic="imports",
+                version=2,
+                is_current=True,
+                score=1.0,
+                # The marker smuggled in via a field the earlier checks do not read.
+                excerpt=f"text {CANARY} text",
+            )
+        ],
+        audit_id="aud_test",
+        provider="fake",
+        model="fake",
+        execution="local",
+    )
+
+    guarded = service._assert_no_markers(smuggled)
+    assert CANARY not in guarded.model_dump_json()
+    assert guarded.status == AnswerStatus.BLOCKED_POLICY_VIOLATION
+    assert guarded.sources == []
+    assert "canary_in_response_blocked" in guarded.security_flags
+
+
 def test_model_cannot_add_a_source_outside_the_authorized_set(make_client, auth_a):
     llm = FakeLLM(["Everything is fine [DOC1][DOC2][DOC3][DOC4][DOC5]."])
     with make_client(llm) as client:
