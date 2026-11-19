@@ -11,3 +11,14 @@ outputs/
 checkpoints/
 *.safetensors
 *.gguf
+
+# Local SQLite store (regenerated from data/synthetic_records.json on startup)
+data/*.sqlite3
+data/*.sqlite3-shm
+data/*.sqlite3-wal
+
+# Fine-tuning artefacts
+finetuning/adapters/
+finetuning/results/
+.coverage
+htmlcov/

@@ -1,7 +1,23 @@
+# Runtime + test dependencies for the AegisRAG API.
+# Pinned to the exact versions this project was built and tested against on
+# Windows 11 / CPython 3.13.14. See requirements-finetuning.txt for the
+# optional LoRA experiment, which pulls in PyTorch and is deliberately kept
+# out of the main install.
+
+# --- API ---
 fastapi==0.115.6
-uvicorn==0.34.0
+starlette==0.41.3
 pydantic==2.10.4
+pydantic-settings==2.7.0
+python-dotenv==1.0.1
+uvicorn[standard]==0.34.0
+
+# --- HTTP client used by every LLM provider ---
 httpx==0.28.1
+
+# --- Tests ---
 pytest==8.3.4
-scikit-learn==1.6.0
-requests==2.32.3
+pytest-cov==6.0.0
+
+# Retrieval is pure-Python BM25 (app/retrieval.py); no numpy/scikit-learn or
+# vector database is required.
