@@ -19,9 +19,11 @@ data/*.sqlite3
 data/*.sqlite3-shm
 data/*.sqlite3-wal
 
-# The API image does not run the fine-tuning experiment.
+# The API image runs neither the fine-tuning experiment nor the optional UI.
 finetuning/
 requirements-finetuning.txt
+ui/
+requirements-ui.txt
 
 # Docs and scratch files
 docs/

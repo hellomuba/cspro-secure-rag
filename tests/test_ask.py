@@ -116,12 +116,36 @@ def test_no_matching_records_abstains_without_calling_the_model(make_client, aut
     assert llm.calls == [], "no evidence means no inference at all"
 
 
-def test_model_abstention_token_is_honoured(make_client, auth_a):
+def test_model_abstention_is_reported_separately_from_a_retrieval_miss(
+    make_client, auth_a
+):
+    """A weak model refusing usable evidence must not look like an empty corpus.
+
+    Both are abstentions, but "no record matched" and "the model would not use
+    the records it was given" have opposite fixes, so they get distinct
+    statuses. Qwen3 0.6B does exactly this in practice.
+    """
     with make_client(FakeLLM(["INSUFFICIENT_EVIDENCE"])) as client:
         body = ask(client, auth_a, CURRENT_POLICY_Q).json()
+
     assert body["abstained"] is True
+    assert body["status"] == AnswerStatus.ABSTAINED_MODEL_DECLINED
+    assert body["status"] != AnswerStatus.ABSTAINED_NO_EVIDENCE
+    assert body["execution"] == "local", "the model really was called"
+    # The evidence the model was shown is returned, so a wrong refusal is visible.
+    assert {s["id"] for s in body["sources"]} == {"a-policy-2", "a-ticket-1"}
+    assert all(s["tenant_id"] == "tenant-a" for s in body["sources"])
+
+
+def test_empty_retrieval_is_a_different_status_and_skips_the_model(make_client, auth_a):
+    llm = FakeLLM(["never reached"])
+    with make_client(llm) as client:
+        body = ask(client, auth_a, "How do I bake sourdough bread at high altitude?").json()
+
     assert body["status"] == AnswerStatus.ABSTAINED_NO_EVIDENCE
+    assert body["execution"] == "none"
     assert body["sources"] == []
+    assert llm.calls == []
 
 
 def test_unsupported_answer_is_downgraded_to_abstention(make_client, auth_a):

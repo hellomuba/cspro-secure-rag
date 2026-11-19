@@ -1,0 +1,8 @@
+# Optional dependencies for the Streamlit console in ui/.
+# Separate from requirements.txt on purpose: the API has no dependency on
+# Streamlit, and the assessment can be run and tested without installing it.
+#
+#   pip install -r requirements-ui.txt
+#   streamlit run ui/app.py
+
+streamlit==1.41.1

@@ -75,7 +75,14 @@ class AskRequest(StrictModel):
 
 class AnswerStatus(StrEnum):
     ANSWERED = "answered"
+    #: Retrieval returned nothing above the score threshold. The model was
+    #: never called -- check `execution: "none"`.
     ABSTAINED_NO_EVIDENCE = "abstained_no_evidence"
+    #: Records *were* retrieved and sent to the model, and the model judged
+    #: them insufficient. Distinct from the above so that a weak model
+    #: over-abstaining is visible rather than being mistaken for a retrieval
+    #: miss -- the two have completely different fixes.
+    ABSTAINED_MODEL_DECLINED = "abstained_model_declined"
     ABSTAINED_CONFLICT = "abstained_conflict"
     ABSTAINED_UNGROUNDED = "abstained_ungrounded"
     BLOCKED_POLICY_VIOLATION = "blocked_policy_violation"

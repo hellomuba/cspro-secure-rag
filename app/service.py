@@ -262,14 +262,18 @@ class AskService:
         flags.extend(verdict.flags)
 
         score_by_id = {h.record.id: h.score for h in analysis.authoritative}
-        sources = (
-            []
-            if verdict.abstained
-            else [
+        if verdict.status is AnswerStatus.ABSTAINED_MODEL_DECLINED:
+            # Show what the model was given. Without this you cannot tell a
+            # correct abstention from a weak model refusing usable evidence,
+            # and those need opposite responses.
+            sources = self._sources(analysis.authoritative, request.question)
+        elif verdict.abstained:
+            sources = []
+        else:
+            sources = [
                 self._source_out(record, score_by_id.get(record.id, 0.0), request.question)
                 for record in verdict.selected
             ]
-        )
 
         return self._finish(
             principal,

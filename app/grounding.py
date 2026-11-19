@@ -49,6 +49,12 @@ NO_EVIDENCE_TEXT = (
     "given."
 )
 
+MODEL_DECLINED_TEXT = (
+    "Records were retrieved for this tenant, but the model judged them "
+    "insufficient to answer and declined. The evidence it was shown is listed "
+    "in the sources."
+)
+
 CONFLICT_TEXT = (
     "This tenant's current records disagree with each other on this topic, so "
     "no single answer is authoritative. The conflicting evidence is listed in "
@@ -90,9 +96,13 @@ def verify_output(
             )
 
     # 2. Explicit abstention requested by the model -------------------------
+    # Reported separately from "retrieval found nothing". Both are abstentions,
+    # but one means the corpus lacks the answer and the other means the model
+    # would not use evidence it was given -- which is what a small model
+    # over-abstaining looks like, and it needs a different fix.
     if ABSTAIN_TOKEN in answer.upper():
         return OutputVerdict(
-            NO_EVIDENCE_TEXT, AnswerStatus.ABSTAINED_NO_EVIDENCE, True, [], flags
+            MODEL_DECLINED_TEXT, AnswerStatus.ABSTAINED_MODEL_DECLINED, True, [], flags
         )
 
     # 3. Citation verification ---------------------------------------------
