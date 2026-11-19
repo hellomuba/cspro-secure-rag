@@ -85,7 +85,9 @@ class RecordStore:
         self._path = str(db_path)
         if self._path != ":memory:":
             Path(self._path).parent.mkdir(parents=True, exist_ok=True)
-        self._lock = threading.Lock()
+        # Re-entrant: `bulk()` holds the lock for the whole batch and the
+        # `upsert` calls inside it re-acquire on the same thread.
+        self._lock = threading.RLock()
         self._bulk_depth = 0
         self._conn = sqlite3.connect(self._path, check_same_thread=False)
         self._conn.row_factory = sqlite3.Row
@@ -105,18 +107,33 @@ class RecordStore:
 
     @contextmanager
     def bulk(self) -> Iterator[None]:
-        """Group many ``upsert`` calls into a single commit.
+        """Group many ``upsert`` calls into one transaction and one commit.
 
-        A 100-record batch import otherwise pays one fsync per record. Nesting
-        is supported; only the outermost block commits.
+        A 100-record batch import otherwise pays one fsync per record.
+
+        The lock is held for the whole block, which serialises concurrent
+        batches. That is deliberate: ``_bulk_depth`` is plain integer state,
+        and FastAPI runs sync endpoints in a threadpool, so two overlapping
+        ingests could otherwise interleave their increments and leave the
+        depth above zero -- at which point no commit would ever fire and
+        writes would sit unflushed. Serialising is the cheap, obviously
+        correct option at this scale.
+
+        An exception inside the block rolls the whole batch back, so a failed
+        import cannot leave half its records committed.
         """
-        self._bulk_depth += 1
-        try:
-            yield
-        finally:
-            self._bulk_depth -= 1
-            if self._bulk_depth == 0:
-                with self._lock:
+        with self._lock:
+            self._bulk_depth += 1
+            try:
+                yield
+            except BaseException:
+                self._bulk_depth -= 1
+                if self._bulk_depth == 0:
+                    self._conn.rollback()
+                raise
+            else:
+                self._bulk_depth -= 1
+                if self._bulk_depth == 0:
                     self._conn.commit()
 
     def _maybe_commit(self) -> None:
