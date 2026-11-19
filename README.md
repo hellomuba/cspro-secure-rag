@@ -581,28 +581,23 @@ I used does not support CUDA or QLoRA.
 
 ## 12. AI-assistance disclosure
 
-CSPRO asks that AI assistance be disclosed on this assessment, so here is
-exactly how I used it.
+This project was developed with AI-assisted engineering tools.
 
-I wrote the product requirements (`docs/PRD.md`) and the initial repository
-scaffold with help from **ChatGPT (OpenAI)**. I then built the implementation —
-the application code, the test suite, the fine-tuning scripts, the Docker
-configuration and this README — with **Claude Code (Anthropic, Claude Opus 5)**,
-working from that PRD.
+ChatGPT (OpenAI) assisted with the initial product requirements and repository
+scaffold. Claude Code (Anthropic) assisted with implementing the FastAPI
+service, the multi-tenant security controls, the RAG pipeline, the automated
+tests, the fine-tuning scripts and the deployment configuration.
 
-I reviewed every design decision and security trade-off recorded here, and I
-stand behind them. Every result in §9 comes from a run I actually executed;
-nothing is estimated or invented, and where something was not run, this README
-says so plainly.
+I directed the implementation and am responsible for reviewing, validating and
+explaining the submitted work.
 
-I understand this is an individual assessment. I can explain, run and debug any
-part of this repository during the live walkthrough — including the parts I
-would change given more time, which I have listed in §10.
+Section 9 distinguishes verified test results from unexecuted experiments and
+unverified integrations. No performance metric is presented without supporting
+execution evidence.
 
-I reused no third-party code beyond the pinned open-source dependencies in
-`requirements.txt` and `requirements-finetuning.txt`. The BM25 implementation,
-the score normalisation, the policy-conflict analysis and all of the security
-controls are original to this repository.
+The implementation uses synthetic data and documented open-source
+dependencies, pinned in `requirements.txt` and `requirements-finetuning.txt`.
+Known limitations are detailed in section 10.
 
 ---
 

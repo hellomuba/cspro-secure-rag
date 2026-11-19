@@ -159,6 +159,12 @@ The previously discussed **HP ZBook G5** remains the documentation hardware refe
 
 **Definition of done:** The local application executes; tenant isolation and prompt-injection tests pass; citations are verifiable; errors are honest; fine-tuning is executed and evaluated or explicitly labeled unexecuted; README contains exact tested setup; 3–5-minute recording shows real behavior; submission includes GitHub/ZIP link and requested engagement details.
 
-## 14. Disclosure
+## 14. AI-assistance disclosure
 
-I wrote this specification and the initial scaffold with help from ChatGPT (OpenAI), and I built the implementation with Claude Code (Anthropic). I have verified and run everything I claim here; I report no metric I did not measure, and I label anything unexecuted as such. All data in this project is synthetic — no real customer, candidate or employee data is used anywhere. The full disclosure is in the README.
+ChatGPT (OpenAI) assisted with preparing this specification and the initial project scaffold. Claude Code (Anthropic) assisted with the subsequent engineering implementation.
+
+The submitted work is subject to independent review and validation. Executed tests, unverified integrations and unexecuted experiments are distinguished in the README.
+
+All assessment records are synthetic. No real customer, candidate or employee data is used.
+
+See README section 12 for the full disclosure.
