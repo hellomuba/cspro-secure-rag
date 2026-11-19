@@ -37,6 +37,51 @@ Source of truth: [docs/PRD.md](../docs/PRD.md)
 - [x] `finetuning/README.md` — honest execution status
 - [ ] Attempt execution; record genuine output or mark UNEXECUTED / NOT MEASURED
 
+## Added mid-stream (maintainer requests)
+
+- [x] Dual-provider LLM abstraction (`LLM_PROVIDER` / `LLM_BASE_URL` /
+      `LLM_MODEL` / `LLM_API_KEY`), no automatic cloud fallback
+- [x] Default model switched to `qwen3:0.6b`
+- [x] Optional Docker: `Dockerfile`, `compose.yaml`, `.dockerignore`
+      — **files written, stack NOT verified** (build cancelled to stop
+      competing with the maintainer's own `ollama/ollama` pull)
+- [ ] Live Ollama integration run (`pytest -m ollama`) — blocked on the image
+      pull finishing
+- [ ] Push to GitHub — **blocked**: `gh` is authenticated as `hellomubaa`,
+      which has `push: false` on `hellomuba/cspro-secure-rag`
+
 ## Review
 
-See the "Review" section appended at the bottom of this file after implementation.
+### What was built
+
+Replaced the HTTP 501 scaffold with a working, tested vertical slice. The
+security argument rests on *ordering* and *structure*, not on prompt wording:
+authenticate, then load only the caller's records, then rank, then decide
+policy — and only then does a model enter the picture, holding opaque `DOCn`
+labels it cannot trade for real record ids.
+
+### Defects found and fixed during implementation
+
+1. **Score normalisation defeated the abstention threshold.** Dividing BM25 by
+   *matched* idf mass let "what is the canary value for tenant B" score ~1.0
+   off the single near-universal term "tenant". Fixed by charging query terms
+   absent from the corpus the maximum idf. Without this the question would
+   have retrieved five tenant-A records instead of abstaining.
+2. **Supersession wrongly retired a current record.** Comparing versions
+   across different records in a topic marked the current v1 ticket
+   `a-ticket-1` as superseded by the v2 policy `a-policy-2`. Now keys on the
+   record's own `is_current` flag. Regression test added.
+3. **Short secrets shredded log lines.** `redact_secrets` replaced every
+   occurrence of a 1-character test key, mangling output. Now guarded by a
+   minimum length.
+4. **~1.5 s per `httpx.Client`** on this machine (SSL context). Made lazy;
+   suite went 289 s -> 16 s. Also batched SQLite commits, which additionally
+   makes a 100-record import pay one fsync instead of 100.
+
+### Verification
+
+`pytest -q`: **180 passed, 9 deselected**, 98% statement coverage of `app/`.
+Live API exercised by hand via curl: health degraded correctly with Ollama
+absent, 401 without a key, 503 (not a fabricated answer) with the runtime
+down, conflict abstention with both records cited, and an audit log containing
+no key, no canary and no record text.
