@@ -1,7 +1,7 @@
 # Product Requirements Document: AegisRAG
 
 **Subtitle:** Secure Local LLM & Multi-Tenant RAG Assessment  
-**Version:** 1.0 (assessment MVP)  
+**Version:** 1.1 (assessment MVP, lightweight local model)  
 **Date:** 2026-11-18  
 **Maintainer:** Mubarak Ibrahim  
 **Repository:** `hellomuba/cspro-secure-rag`  
@@ -30,7 +30,7 @@ AegisRAG is a local-first, multi-tenant retrieval-augmented answering service bu
 | AC01 | FastAPI with GET /health, POST /ingest and POST /ask | Routes served and included in OpenAPI |
 | AC02 | Validate inputs and handle malformed requests | 422 errors and informative safe 4xx/5xx |
 | AC03 | At least 8 original synthetic records | >=2 tenants, older/current contradiction and forged instruction |
-| AC04 | Model uses local open-weight runtime | Ollama `qwen2.5:1.5b-instruct`; no paid inference |
+| AC04 | Model uses local open-weight runtime | Ollama `qwen2.5:0.5b-instruct`; no paid inference |
 | AC05 | Authenticated tenant isolation in code | Tenant A cannot retrieve, cite or output Tenant B canary |
 | AC06 | Evidence-grounded RAG | Authorized source IDs and exact excerpts, with abstention |
 | AC07 | Prompt-injection resistance | Malicious retrieved instructions ignored/quarantined |
@@ -122,7 +122,7 @@ The sample dataset contains five `tenant-a` records and four `tenant-b` records,
 
 ## 9. Local model & retrieval
 
-Model: `qwen2.5:1.5b-instruct` via Ollama, running locally at `http://localhost:11434`. MVP retrieval may use deterministic TF-IDF/BM25; embeddings are optional. Search over authorized records only; require a grounding threshold or abstain. Treat retrieved text as untrusted and reject model-only citation suggestions.
+Model: `qwen2.5:0.5b-instruct` via Ollama, running locally at `http://localhost:11434`. Optional higher-quality comparison: `qwen2.5:1.5b-instruct`. MVP retrieval may use deterministic TF-IDF/BM25; embeddings are optional. Search over authorized records only; require a grounding threshold or abstain. Treat retrieved text as untrusted and reject model-only citation suggestions.
 
 ## 10. LoRA/QLoRA experiment
 
@@ -159,7 +159,7 @@ FastAPI/Python 20; local open-weight LLM 15; LoRA/QLoRA and evaluation 20; RAG a
 
 ## 14. Constraints and completion definition
 
-The intended workstation is Windows, Intel Core i7-1165G7, 32 GB RAM and unverified GPU. Small quantized local inference is plausible; successful QLoRA execution must not be claimed without hardware verification. Corporate-machine policy must be respected. Nigeria-based contract eligibility remains unconfirmed.
+The previously discussed **HP ZBook G5** remains the documentation hardware reference. Development will currently use a **different Windows x64 PC** with Intel Core i7-1165G7 (11th Gen), 32 GB RAM, and unverified GPU. The current PC's make/model must not be inferred to be the ZBook. Lightweight quantized CPU inference is a reasonable starting approach; successful QLoRA execution must not be claimed without hardware verification. Corporate-machine policy must be respected. Nigeria-based contract eligibility remains unconfirmed.
 
 **Definition of done:** The local application executes; tenant isolation and prompt-injection tests pass; citations are verifiable; errors are honest; fine-tuning is executed and evaluated or explicitly labeled unexecuted; README contains exact tested setup; 3–5-minute recording shows real behavior; submission includes GitHub/ZIP link and requested engagement details.
 
