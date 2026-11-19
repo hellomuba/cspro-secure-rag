@@ -281,9 +281,27 @@ Copy-Item .env.example .env     # then edit the two tenant API keys
 
 ### 5.2 Local model (Ollama)
 
-The model for this project is **`qwen3:0.6b`**, served by Ollama on
-`http://localhost:11434`. Either way of running Ollama below is local
-inference on this machine — nothing leaves the host.
+Nothing in the code is tied to a particular model — `LLM_MODEL` selects it.
+Three are relevant:
+
+| Model | Size | Role |
+|-------|------|------|
+| `qwen3:0.6b` | ~523 MB | **Configured default.** The model pulled and used on the development machine. |
+| `qwen2.5:0.5b-instruct` | ~398 MB | Named in [docs/PRD.md](docs/PRD.md) v1.1 as the lightweight default. |
+| `qwen2.5:1.5b-instruct` | ~986 MB | Optional higher-quality comparison. |
+
+> **Discrepancy to settle before submission:** the PRD v1.1 names
+> `qwen2.5:0.5b-instruct`; the machine is configured for `qwen3:0.6b`. Both
+> work — set `LLM_MODEL` in `.env`. Pick one and make the PRD, the README and
+> the recording agree.
+
+Small quantized models are weaker at instruction-following and grounding than
+larger ones. That is precisely why the application does not trust the model:
+every citation is re-derived in the backend and every answer is re-validated
+(§3). A weaker model produces more abstentions, not more leaks.
+
+Either way of running Ollama below is local inference on this machine —
+nothing leaves the host.
 
 **Option A — Ollama in Docker (used on the development machine).**
 Nothing is installed into Windows itself:
@@ -458,9 +476,17 @@ than claiming general natural-language entailment.
 
 ## 9. Verified status
 
-Everything in this section was executed on the development machine
-(Windows 11, Intel Core i7-1165G7, 32 GB RAM, CPython 3.13.14, no CUDA GPU).
+Everything in this section was executed on the development machine.
 Anything not listed here has not been run.
+
+**Development machine:** a Windows x64 PC with an 11th-gen Intel Core
+i7-1165G7, 32 GB RAM, CPython 3.13.14, **no CUDA GPU** (confirmed by
+`torch.cuda.is_available() == False`).
+
+**Hardware reference vs. machine in use:** the HP ZBook G5 is the hardware
+reference retained in [docs/PRD.md](docs/PRD.md) from earlier discussion. The
+work was *not* done on it. Do not infer that the current PC is the ZBook, or
+that it supports CUDA/QLoRA — it does not.
 
 | Item | Status |
 |------|--------|
