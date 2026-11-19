@@ -5,7 +5,6 @@ CSPRO Senior AI Developer / Open Source LLM Engineer assessment.
 Maintainer: Mubarak Ibrahim. Synthetic data only.
 
 Specification of record: [docs/PRD.md](docs/PRD.md).
-Demo walkthrough: [docs/DEMO_SCRIPT.md](docs/DEMO_SCRIPT.md).
 
 ---
 
@@ -515,7 +514,7 @@ that it supports CUDA/QLoRA — it does not.
 | Docker compose stack | <!--DOCKER-->**NOT VERIFIED.** The image build and `compose up` were started and then deliberately cancelled: they were pulling the same ~3.2 GB `ollama/ollama` image the maintainer was already downloading, and competing for bandwidth. The files are provided but the stack has not been run end to end. Treat section 7 as untested until someone runs it.<!--/DOCKER--> |
 | LoRA training | <!--LORA-->pending<!--/LORA--> |
 | LoRA evaluation | <!--LORAEVAL-->pending<!--/LORAEVAL--> |
-| Demo recording | **NOT PRODUCED.** [docs/DEMO_SCRIPT.md](docs/DEMO_SCRIPT.md) is the script to follow; no recording exists. |
+| Demo recording | **NOT PRODUCED.** No recording exists. The walkthrough notes are kept internally and are not part of this repository. |
 
 ---
 

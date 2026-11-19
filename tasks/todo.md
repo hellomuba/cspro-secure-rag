@@ -26,7 +26,7 @@ Source of truth: [docs/PRD.md](../docs/PRD.md)
 - [x] 503 on LLM unavailable/timeout; sanitized 500
 - [x] Full pytest suite incl. integration markers
 - [x] `README.md` rewrite (architecture, threat model, Windows setup, verified results)
-- [x] `docs/DEMO_SCRIPT.md`
+- [x] Demo walkthrough notes (kept internal, deliberately not committed)
 - [x] `scripts/seed.py` loader for the 9 synthetic records
 
 ## P2 — LoRA/QLoRA experiment
