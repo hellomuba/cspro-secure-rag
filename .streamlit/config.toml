@@ -9,6 +9,21 @@ address = "127.0.0.1"
 port = 8501
 headless = true
 
+# If the browser reports "Cannot connect to Streamlit (HTTP status: 403)" while
+# `curl http://127.0.0.1:8501` returns 200, the websocket handshake is being
+# rejected or rewritten between the browser and the server -- typically an
+# editor's forwarded-port proxy, or a stale tab from an earlier instance.
+#
+# First try a real external browser at http://localhost:8501 and a hard refresh.
+# Only if that fails, uncomment these two lines:
+#
+#   enableXsrfProtection = false
+#   enableCORS = false
+#
+# That is acceptable *only* because `address` above restricts the server to
+# loopback, so there is no cross-origin attacker to defend against. Do not
+# combine it with a non-loopback address.
+
 [browser]
 # No telemetry. This is a security assessment on a managed corporate machine;
 # usage statistics should not leave it.
