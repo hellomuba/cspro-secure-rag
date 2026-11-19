@@ -181,6 +181,52 @@ def test_ollama_http_error_raises_response_error():
     provider.close()
 
 
+def test_reasoning_model_that_spends_its_budget_thinking_is_retried():
+    """Regression: qwen3 returned thinking but no content, surfacing as a 503.
+
+    The first call reproduces that; the retry must disable thinking and must
+    be the only thing that changes.
+    """
+    import json
+
+    calls: list[dict] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        body = json.loads(request.content)
+        calls.append(body)
+        if "think" not in body:
+            # Budget consumed by the hidden chain of thought.
+            return httpx.Response(
+                200, json={"message": {"content": "", "thinking": "long reasoning..."}}
+            )
+        return httpx.Response(200, json={"message": {"content": "the real answer"}})
+
+    provider = ollama_with(handler)
+    result = provider.generate(system="s", user="u")
+
+    assert result.text == "the real answer"
+    assert len(calls) == 2, "exactly one retry"
+    assert "think" not in calls[0], "the first attempt leaves the flag off"
+    assert calls[1]["think"] is False
+    assert calls[0]["messages"] == calls[1]["messages"], "same prompt, only the flag differs"
+    provider.close()
+
+
+def test_no_retry_when_the_model_does_not_think():
+    """A model with no thinking field must not get the think flag at all."""
+    calls: list[int] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        calls.append(1)
+        return httpx.Response(200, json={"message": {"content": ""}})
+
+    provider = ollama_with(handler)
+    with pytest.raises(LLMResponseError, match="empty completion"):
+        provider.generate(system="s", user="u")
+    assert len(calls) == 1, "no pointless retry against a non-reasoning model"
+    provider.close()
+
+
 def test_ollama_empty_completion_is_an_error_not_an_answer():
     provider = ollama_with(lambda r: httpx.Response(200, json={"message": {"content": "  "}}))
     with pytest.raises(LLMResponseError, match="empty"):

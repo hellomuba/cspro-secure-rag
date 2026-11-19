@@ -519,8 +519,8 @@ I used does not support CUDA or QLoRA.
 
 | Item | Status |
 |------|--------|
-| Default test suite | <!--TESTS-->**VERIFIED.** `182 passed, 9 deselected` in 17.72 s (`pytest -q`, 19 Nov 2026). 0 failed, 0 skipped. 98% statement coverage of `app/`.<!--/TESTS--> |
-| Live Ollama integration (`-m ollama`) | <!--OLLAMA-->pending<!--/OLLAMA--> |
+| Default test suite | <!--TESTS-->**VERIFIED.** `184 passed, 9 deselected` in 10.81 s (`pytest -q`, 19 Nov 2026). 0 failed, 0 skipped. 98% statement coverage of `app/`.<!--/TESTS--> |
+| Live Ollama integration (`-m ollama`) | <!--OLLAMA-->**VERIFIED.** `6 passed, 187 deselected` in 27.4 s (`pytest -m ollama -v`, 19 Nov 2026) against a real local `qwen3:0.6b` (522 MB, Q4_K_M) served by Ollama in a container on `127.0.0.1:11434`. `/health` reported `execution: local`, `model_available: true`. A live `/ask` returned a grounded answer citing `a-policy-2` and `a-ticket-1` with `a-policy-1` listed in `superseded_excluded`; a live cross-tenant canary request abstained with zero sources and zero canary occurrences in the response body.<!--/OLLAMA--> |
 | Live OpenAI-compatible integration (`-m openai`) | **NOT RUN** — no API key was configured; tests skip by design |
 | Docker compose stack | <!--DOCKER-->**NOT VERIFIED.** I started the image build and `compose up`, then cancelled both: they were pulling the same ~3.2 GB `ollama/ollama` image I was already downloading in another terminal, and the two were competing for bandwidth. The `compose.yaml` and `Dockerfile` do validate (`docker compose config` passes for both profiles), but I have not run the stack end to end. Treat section 7 as untested.<!--/DOCKER--> |
 | LoRA training | <!--LORA-->**EXECUTED.** LoRA on `Qwen/Qwen2.5-0.5B-Instruct`, 3 epochs / 108 steps, mean loss 0.4564 -> 0.0633 -> 0.0053, 28.5 min on CPU, seed 20261119. **Plain LoRA in fp32, not QLoRA** -- this machine has no CUDA GPU.<!--/LORA--> |
@@ -573,6 +573,7 @@ I used does not support CUDA or QLoRA.
 | Record count is wrong after editing `data/synthetic_records.json` | Seeding only runs on an empty database. Delete `data/aegisrag.sqlite3*` and restart. |
 | `pytest` collects 0 integration tests | Expected: they are deselected by default. Use `-m ollama`. |
 | `-m ollama` reports all skipped | The skip reason names the cause (runtime down, or model not pulled). Skips are deliberate — they never silently pass. |
+| `/ask` returns 503 "empty completion" on a reasoning model | Reasoning models (`qwen3`, `deepseek-r1`) spend part of `LLM_MAX_OUTPUT_TOKENS` on hidden reasoning that Ollama returns in a separate `thinking` field. The provider detects this and retries once with thinking disabled; if it still fails, raise `LLM_MAX_OUTPUT_TOKENS`. |
 | `ModuleNotFoundError: torch` from `finetuning/` | `pip install -r requirements-finetuning.txt`. The API itself never needs PyTorch. |
 | Docker: API restarts waiting for Ollama | `depends_on: service_healthy` holds it until Ollama answers. First start includes a ~1 GB image pull. |
 | Docker: `/ask` 503 but `/health` is up | The model is not pulled *inside the container*: `docker compose exec ollama ollama pull qwen3:0.6b`. |

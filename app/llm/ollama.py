@@ -23,9 +23,8 @@ class OllamaProvider(LLMProvider):
     name = "ollama"
     execution = "local"
 
-    def generate(self, *, system: str, user: str) -> GenerationResult:
-        started = time.perf_counter()
-        payload = {
+    def _payload(self, system: str, user: str, *, think: bool | None) -> dict:
+        payload: dict = {
             "model": self.model,
             "stream": False,
             "messages": [
@@ -40,10 +39,41 @@ class OllamaProvider(LLMProvider):
                 "num_predict": self.max_output_tokens,
             },
         }
-        data = self._post("/api/chat", payload)
-        text = (data.get("message") or {}).get("content")
+        if think is not None:
+            payload["think"] = think
+        return payload
+
+    def generate(self, *, system: str, user: str) -> GenerationResult:
+        """Run one local completion.
+
+        Reasoning models (qwen3, deepseek-r1, ...) spend part of the
+        ``num_predict`` budget on a hidden chain of thought that Ollama returns
+        in a separate ``thinking`` field. On a long RAG context that reasoning
+        can consume the entire budget and leave ``content`` empty -- which would
+        surface to the caller as a 503 even though the runtime is perfectly
+        healthy.
+
+        So: if the model produced thinking but no answer, retry once with
+        thinking disabled. The retry is conditional on evidence that this model
+        actually thinks, which keeps the request unchanged for every model that
+        does not support the ``think`` flag.
+        """
+        started = time.perf_counter()
+        data = self._post("/api/chat", self._payload(system, user, think=None))
+        message = data.get("message") or {}
+        text = message.get("content")
+
+        if (not isinstance(text, str) or not text.strip()) and (message.get("thinking") or "").strip():
+            data = self._post("/api/chat", self._payload(system, user, think=False))
+            message = data.get("message") or {}
+            text = message.get("content")
+
         if not isinstance(text, str) or not text.strip():
-            raise LLMResponseError("ollama returned an empty completion")
+            raise LLMResponseError(
+                f"ollama returned an empty completion for model '{self.model}'. "
+                "If this is a reasoning model, raise LLM_MAX_OUTPUT_TOKENS so the "
+                "answer still fits after the hidden reasoning."
+            )
         return GenerationResult(
             text=text.strip(),
             provider=self.name,
