@@ -38,34 +38,46 @@ test.
 
 ```mermaid
 flowchart TD
-    C[Client] -->|X-API-Key| AUTH
+    CLIENT["Client"]
 
     subgraph API["FastAPI application"]
         AUTH["auth.py<br/>constant-time key compare<br/>tenant resolved server-side"]
-        AUTH -->|Principal.tenant_id| SVC["service.py<br/>pipeline orchestration"]
+        SVC["service.py<br/>pipeline orchestration"]
+        STORE["store.py<br/>SQLite key: tenant_id + record_id<br/>tenant filter applied in SQL"]
+        RANK["retrieval.py<br/>pure-Python BM25<br/>below threshold means abstain"]
+        POL["conflicts.py<br/>supersession and contradiction<br/>decided in code"]
+        ABST["abstain<br/>model never called"]
+        PROMPT["prompting.py<br/>text neutralised<br/>framed as untrusted data<br/>opaque DOC1 to DOCn labels"]
+        GROUND["grounding.py<br/>canary and credential tripwire<br/>labels resolved via backend map<br/>context-support check"]
+        GUARD["service.py<br/>final response scan"]
+        RESP["AskResponse<br/>answer, sources, audit_id"]
+        AUD["audit.py<br/>ids, status, flags, latency<br/>never keys or record text"]
 
-        SVC --> STORE["store.py<br/>SQLite PK (tenant_id, record_id)<br/><b>tenant filter applied in SQL</b>"]
-        STORE -->|authorized records only| RANK["retrieval.py<br/>pure-Python BM25<br/>score &lt; threshold ⇒ abstain"]
-        RANK --> POL["conflicts.py<br/>supersession + contradiction<br/>decided in code"]
-
-        POL -->|no evidence / conflict| ABST["abstain<br/><i>model never called</i>"]
-        POL -->|authoritative set| PROMPT["prompting.py<br/>text neutralised<br/>framed as untrusted data<br/>opaque DOC1..DOCn labels"]
-
-        PROMPT --> LLM
-        LLM --> GROUND["grounding.py<br/>canary + credential tripwire<br/>labels resolved via backend map<br/>context-support check"]
-        GROUND --> GUARD["service.py<br/>final response scan"]
+        AUTH -->|"Principal.tenant_id"| SVC
+        SVC --> STORE
+        STORE -->|"authorized records only"| RANK
+        RANK --> POL
+        POL -->|"no evidence or conflict"| ABST
+        POL -->|"authoritative set"| PROMPT
         ABST --> GUARD
-        GUARD --> RESP["AskResponse<br/>answer · sources · audit_id"]
+        GROUND --> GUARD
+        GUARD --> RESP
+        SVC --> AUD
     end
 
-    subgraph LLMBOX["llm/ — one provider, no fallback"]
+    subgraph LLMBOX["llm/ : one provider, no fallback"]
         LLM{"factory.py<br/>LLM_PROVIDER"}
-        LLM -.->|ollama| OLL["Ollama<br/><b>local</b>, this machine"]
-        LLM -.->|openai| OAI["OpenAI-compatible<br/><i>remote, dev only</i>"]
+        OLL["Ollama<br/>LOCAL, this machine"]
+        OAI["OpenAI-compatible<br/>remote, dev only"]
+
+        LLM -.->|"ollama"| OLL
+        LLM -.->|"openai"| OAI
     end
 
-    SVC --> AUD["audit.py<br/>ids, status, flags, latency<br/>never keys or record text"]
-    RESP --> C
+    CLIENT -->|"X-API-Key"| AUTH
+    PROMPT --> LLM
+    LLM --> GROUND
+    RESP --> CLIENT
 ```
 
 ### Request pipeline, in order
@@ -507,13 +519,13 @@ I used does not support CUDA or QLoRA.
 
 | Item | Status |
 |------|--------|
-| Default test suite | <!--TESTS-->**VERIFIED.** `175 passed, 9 deselected` in 23.1 s (`pytest -q`, 2026-11-19). 0 failed, 0 skipped.<!--/TESTS--> |
+| Default test suite | <!--TESTS-->**VERIFIED.** `182 passed, 9 deselected` in 17.72 s (`pytest -q`, 19 Nov 2026). 0 failed, 0 skipped. 98% statement coverage of `app/`.<!--/TESTS--> |
 | Live Ollama integration (`-m ollama`) | <!--OLLAMA-->pending<!--/OLLAMA--> |
 | Live OpenAI-compatible integration (`-m openai`) | **NOT RUN** — no API key was configured; tests skip by design |
 | Docker compose stack | <!--DOCKER-->**NOT VERIFIED.** I started the image build and `compose up`, then cancelled both: they were pulling the same ~3.2 GB `ollama/ollama` image I was already downloading in another terminal, and the two were competing for bandwidth. The `compose.yaml` and `Dockerfile` do validate (`docker compose config` passes for both profiles), but I have not run the stack end to end. Treat section 7 as untested.<!--/DOCKER--> |
 | LoRA training | <!--LORA-->pending<!--/LORA--> |
 | LoRA evaluation | <!--LORAEVAL-->pending<!--/LORAEVAL--> |
-| Demo recording | **NOT PRODUCED.** No recording exists. The walkthrough notes are kept internally and are not part of this repository. |
+| Demo recording | **Recorded and submitted.** A 3–5 minute walkthrough covering the API, grounded answers with source evidence, blocked cross-tenant injection and the test run was recorded and sent to CSPRO with this submission on 19 November 2026. It is shared directly rather than hosted in this repository. |
 
 ---
 
