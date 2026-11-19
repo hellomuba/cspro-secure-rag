@@ -292,6 +292,7 @@ class AskService:
                 model=generation.model,
                 execution=generation.execution,
                 security_flags=flags,
+                quality_notes=verdict.quality_notes,
             ),
             llm_latency_ms=generation.latency_ms,
         )
@@ -359,6 +360,7 @@ class AskService:
             citation_ids=[s.id for s in response.sources],
             superseded_ids=[s.id for s in response.superseded_excluded],
             security_flags=response.security_flags,
+            quality_edits=len(response.quality_notes),
             provider=response.provider,
             model=response.model,
             execution=response.execution,

@@ -117,6 +117,10 @@ class AskResponse(BaseModel):
     sources: list[SourceOut]
     superseded_excluded: list[SupersededRef] = Field(default_factory=list)
     security_flags: list[str] = Field(default_factory=list)
+    #: Verbatim record of any text removed from the model's completion by the
+    #: response-quality pass. Present so an edit is never invisible to the
+    #: caller; empty in the normal case.
+    quality_notes: list[str] = Field(default_factory=list)
     audit_id: str
     provider: str
     model: str

@@ -25,6 +25,13 @@ import re
 from dataclasses import dataclass, field
 
 from app.config import Settings
+from app.hedging import (
+    has_answer_content,
+    is_contradictory_hedge,
+    remove_abstain_token,
+    split_sentences,
+    strip_trailing_hedges,
+)
 from app.prompting import ABSTAIN_TOKEN
 from app.retrieval import tokenize
 from app.sanitize import contains_canary, normalise_unicode
@@ -69,6 +76,9 @@ class OutputVerdict:
     abstained: bool
     selected: list[StoredRecord] = field(default_factory=list)
     flags: list[str] = field(default_factory=list)
+    #: Text removed from the completion, verbatim, so nothing is edited out
+    #: silently. Surfaced on the response as `quality_notes`.
+    quality_notes: list[str] = field(default_factory=list)
 
 
 def verify_output(
@@ -95,17 +105,7 @@ def verify_output(
                 REFUSAL_TEXT, AnswerStatus.BLOCKED_POLICY_VIOLATION, True, [], flags
             )
 
-    # 2. Explicit abstention requested by the model -------------------------
-    # Reported separately from "retrieval found nothing". Both are abstentions,
-    # but one means the corpus lacks the answer and the other means the model
-    # would not use evidence it was given -- which is what a small model
-    # over-abstaining looks like, and it needs a different fix.
-    if ABSTAIN_TOKEN in answer.upper():
-        return OutputVerdict(
-            MODEL_DECLINED_TEXT, AnswerStatus.ABSTAINED_MODEL_DECLINED, True, [], flags
-        )
-
-    # 3. Citation verification ---------------------------------------------
+    # 2. Citation verification ---------------------------------------------
     cited = [m.upper() for m in _LABEL_RE.findall(answer)]
     valid = [label for label in cited if label in label_map]
     invalid = [label for label in cited if label not in label_map]
@@ -123,6 +123,38 @@ def verify_output(
             flags.append("no_valid_citation_in_output")
         selected = list(label_map.values())
 
+    # 3. Abstention, and self-contradictory hedging -------------------------
+    # A completion that is *only* the abstain token, or only hedging, is a
+    # declined answer. A grounded answer that merely has hedging stapled to the
+    # end is still a good answer -- the filler is removed and reported, not
+    # treated as a refusal. Conflating the two is what made a correct, cited
+    # Qwen3 answer come back as a full abstention.
+    answer, removed = strip_trailing_hedges(answer, grounded=bool(valid))
+    quality_notes = [f"removed contradictory trailing hedge: {r}" for r in removed]
+    if removed:
+        flags.append("contradictory_hedge_removed")
+
+    # The token can also arrive inside the same sentence as a citation --
+    # observed live as "[DOC1] INSUFFICIENT_EVIDENCE." Sentence-level stripping
+    # cannot see that, and without this it would be returned as an answer.
+    if ABSTAIN_TOKEN in answer.upper():
+        without_token, changed = remove_abstain_token(answer)
+        if changed and has_answer_content(without_token):
+            quality_notes.append(
+                "removed stray abstention token from an otherwise cited answer"
+            )
+            flags.append("contradictory_hedge_removed")
+            answer = without_token
+        elif changed:
+            return OutputVerdict(
+                MODEL_DECLINED_TEXT, AnswerStatus.ABSTAINED_MODEL_DECLINED, True, [], flags
+            )
+
+    if _is_declined(answer):
+        return OutputVerdict(
+            MODEL_DECLINED_TEXT, AnswerStatus.ABSTAINED_MODEL_DECLINED, True, [], flags
+        )
+
     # 4. Support check ------------------------------------------------------
     support = _support_ratio(answer, context_text=context_text, question=question)
     if support is not None and support < settings.grounding_min_support:
@@ -138,7 +170,29 @@ def verify_output(
             UNGROUNDED_TEXT, AnswerStatus.ABSTAINED_UNGROUNDED, True, [], flags
         )
 
-    return OutputVerdict(rendered, AnswerStatus.ANSWERED, False, selected, flags)
+    return OutputVerdict(
+        rendered, AnswerStatus.ANSWERED, False, selected, flags, quality_notes
+    )
+
+
+def _is_declined(answer: str) -> bool:
+    """True when the completion is a refusal rather than an answer.
+
+    Three cases, and deliberately no more. A completion that is merely empty
+    or unusable is *not* a decline -- it falls through to the grounding checks
+    and is reported as ungrounded, which is a different fault.
+    """
+    # 1. The bare abstain token, in any casing or spacing.
+    collapsed = re.sub(r"[^A-Za-z_ ]", "", answer).strip().upper().replace(" ", "_")
+    if collapsed.strip("_") == ABSTAIN_TOKEN:
+        return True
+    # 2. The token survived next to no citation at all: not an answer.
+    if ABSTAIN_TOKEN in answer.upper() and not _LABEL_RE.search(answer):
+        return True
+    # 3. Every sentence is a blanket insufficiency claim, so there is no answer
+    #    underneath the hedging for strip_trailing_hedges to have preserved.
+    sentences = split_sentences(answer)
+    return bool(sentences) and all(is_contradictory_hedge(s) for s in sentences)
 
 
 def _render_citations(answer: str, label_map: dict[str, StoredRecord]) -> str:
