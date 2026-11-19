@@ -12,19 +12,27 @@ After a batch-import retry, a document belonging to Tenant B contaminates Tenant
 
 - Python 3.11+, FastAPI, Pydantic and pytest
 - Tenant-scoped authenticated ingestion and retrieval
-- Ollama with the local open-weight model `qwen2.5:1.5b-instruct`
+- Ollama with the local open-weight model `qwen2.5:0.5b-instruct`
 - Verifiable source IDs and excerpts, abstention and conflict detection
 - Automated cross-tenant leakage and prompt-injection regression tests
 - Reproducible synthetic LoRA/QLoRA experiment and baseline evaluation
 
 Full requirements, API contracts, acceptance criteria and delivery priorities: **[docs/PRD.md](docs/PRD.md)**.
 
+## Models and development hardware
+
+**Default local model:** `qwen2.5:0.5b-instruct` (approximately 398 MB, Q4 quantization). This is a lightweight CPU-friendly development choice, but it may be less reliable than larger models on grounding and instruction following. **Optional comparison model:** `qwen2.5:1.5b-instruct` (approximately 986 MB); download it separately and set `OLLAMA_MODEL` accordingly.
+
+**Hardware reference retained:** HP ZBook G5, the machine previously discussed for this assessment. **Current machine being used for the work:** a different Windows x64 PC with an 11th Gen Intel Core i7-1165G7 and 32 GB RAM. Its GPU and exact model are not confirmed. Do not assume the current PC is the ZBook, or that it supports CUDA/QLoRA. Only use organization-managed hardware if permitted.
+
+The final demo must test the **actual installed model**; do not claim live Ollama inference until it is executed and verified.
+
 ## Quick start (Windows PowerShell)
 
 ```powershell
 py -3.11 -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
-ollama pull qwen2.5:1.5b-instruct
+ollama pull qwen2.5:0.5b-instruct
 .\.venv\Scripts\python.exe -m uvicorn app.main:app --reload
 .\.venv\Scripts\python.exe -m pytest -q
 ```
