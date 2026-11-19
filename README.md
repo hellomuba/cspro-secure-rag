@@ -167,8 +167,8 @@ Stated plainly because the distinction is the point of the project:
   tripwire catches a literal marker, not a paraphrase or an encoding of it. The
   context-support check is a bag-of-words ratio, not entailment.
 
-The system is designed so that the heuristic layers failing does not breach the
-structural ones. `tests/test_security.py::test_injected_document_inside_the_victim_corpus_still_cannot_leak`
+I designed it so that a heuristic layer failing does not breach a structural
+one. `tests/test_security.py::test_injected_document_inside_the_victim_corpus_still_cannot_leak`
 demonstrates exactly that: it disables the scanner, lets the payload reach the
 prompt, has the model obey the injection completely — and the canary still does
 not reach the response body.
@@ -474,11 +474,11 @@ system abstains before the model is called.
 the model emits `INSUFFICIENT_EVIDENCE`, when a conflict is detected, or when
 the answer's context-support ratio falls below `GROUNDING_MIN_SUPPORT` (0.35).
 
-**Supersession** keys on a record's own `is_current` flag. Comparing versions
-across *different* records in a topic was implemented, then removed: it wrongly
+**Supersession** keys on a record's own `is_current` flag. I first compared
+versions across *different* records in a topic, then removed that: it wrongly
 retired a current v1 support ticket because an unrelated policy in the same
 topic had reached v2. Without a lineage field there is no sound way to infer
-that two records are versions of one document, and guessing silently drops
+that two records are versions of the same document, and guessing silently drops
 authoritative evidence. Regression test:
 `test_a_current_lower_version_record_is_not_wrongly_retired`.
 
@@ -486,32 +486,31 @@ authoritative evidence. Regression test:
 to hours, percentages) from records that are current in the same topic. More
 than one distinct value from two or more records ⇒ `conflict: true` and an
 abstention, with both records returned as evidence. "7 days" vs "1 week" does
-*not* conflict; "7 days" vs "45 days" does. This is deliberately narrow —
-it detects the class of contradiction the corpus contains and says so, rather
-than claiming general natural-language entailment.
+*not* conflict; "7 days" vs "45 days" does. I kept this narrow on purpose: it
+detects the class of contradiction this corpus contains and says so, rather
+than pretending to do general natural-language entailment.
 
 ---
 
 ## 9. Verified status
 
-Everything in this section was executed on the development machine.
-Anything not listed here has not been run.
+Everything in this section is something I actually ran on my development
+machine. If it is not listed here, I did not run it.
 
-**Development machine:** a Windows x64 PC with an 11th-gen Intel Core
-i7-1165G7, 32 GB RAM, CPython 3.13.14, **no CUDA GPU** (confirmed by
-`torch.cuda.is_available() == False`).
+**My development machine:** a Windows x64 PC with an 11th-gen Intel Core
+i7-1165G7, 32 GB RAM and CPython 3.13.14. It has **no CUDA GPU** — I confirmed
+this rather than assuming it (`torch.cuda.is_available()` returns `False`).
 
-**Hardware reference vs. machine in use:** the HP ZBook G5 is the hardware
-reference retained in [docs/PRD.md](docs/PRD.md) from earlier discussion. The
-work was *not* done on it. Do not infer that the current PC is the ZBook, or
-that it supports CUDA/QLoRA — it does not.
+**On the hardware reference:** [docs/PRD.md](docs/PRD.md) retains the HP ZBook
+G5 from an earlier discussion. I did not build this on that machine, and the PC
+I used does not support CUDA or QLoRA.
 
 | Item | Status |
 |------|--------|
 | Default test suite | <!--TESTS-->**VERIFIED.** `175 passed, 9 deselected` in 23.1 s (`pytest -q`, 2026-11-19). 0 failed, 0 skipped.<!--/TESTS--> |
 | Live Ollama integration (`-m ollama`) | <!--OLLAMA-->pending<!--/OLLAMA--> |
 | Live OpenAI-compatible integration (`-m openai`) | **NOT RUN** — no API key was configured; tests skip by design |
-| Docker compose stack | <!--DOCKER-->**NOT VERIFIED.** The image build and `compose up` were started and then deliberately cancelled: they were pulling the same ~3.2 GB `ollama/ollama` image the maintainer was already downloading, and competing for bandwidth. The files are provided but the stack has not been run end to end. Treat section 7 as untested until someone runs it.<!--/DOCKER--> |
+| Docker compose stack | <!--DOCKER-->**NOT VERIFIED.** I started the image build and `compose up`, then cancelled both: they were pulling the same ~3.2 GB `ollama/ollama` image I was already downloading in another terminal, and the two were competing for bandwidth. The `compose.yaml` and `Dockerfile` do validate (`docker compose config` passes for both profiles), but I have not run the stack end to end. Treat section 7 as untested.<!--/DOCKER--> |
 | LoRA training | <!--LORA-->pending<!--/LORA--> |
 | LoRA evaluation | <!--LORAEVAL-->pending<!--/LORAEVAL--> |
 | Demo recording | **NOT PRODUCED.** No recording exists. The walkthrough notes are kept internally and are not part of this repository. |
@@ -570,25 +569,28 @@ that it supports CUDA/QLoRA — it does not.
 
 ## 12. AI-assistance disclosure
 
-Per CSPRO's requirement to disclose AI assistance on an individual assessment:
+CSPRO asks that AI assistance be disclosed on this assessment, so here is
+exactly how I used it.
 
-- The original PRD (`docs/PRD.md`) and the initial repository scaffold were
-  prepared with **ChatGPT (OpenAI)**.
-- The implementation in this branch — application code, test suite,
-  fine-tuning scripts, Docker configuration and this README — was written with
-  **Claude Code (Anthropic, Claude Opus 5)** working from that PRD.
-- All design decisions, security trade-offs and limitations recorded here were
-  reviewed by the maintainer. Every result reported in §9 was produced by an
-  actual execution; nothing is estimated, extrapolated or invented. Where
-  something was not run, it says so.
-- The maintainer is responsible for independently understanding, running and
-  defending every part of this repository during the live code walkthrough and
-  debugging exercise.
+I wrote the product requirements (`docs/PRD.md`) and the initial repository
+scaffold with help from **ChatGPT (OpenAI)**. I then built the implementation —
+the application code, the test suite, the fine-tuning scripts, the Docker
+configuration and this README — with **Claude Code (Anthropic, Claude Opus 5)**,
+working from that PRD.
 
-Reused third-party code: none beyond the pinned open-source dependencies in
+I reviewed every design decision and security trade-off recorded here, and I
+stand behind them. Every result in §9 comes from a run I actually executed;
+nothing is estimated or invented, and where something was not run, this README
+says so plainly.
+
+I understand this is an individual assessment. I can explain, run and debug any
+part of this repository during the live walkthrough — including the parts I
+would change given more time, which I have listed in §10.
+
+I reused no third-party code beyond the pinned open-source dependencies in
 `requirements.txt` and `requirements-finetuning.txt`. The BM25 implementation,
-retrieval normalisation, policy analysis and all security controls are original
-to this repository.
+the score normalisation, the policy-conflict analysis and all of the security
+controls are original to this repository.
 
 ---
 

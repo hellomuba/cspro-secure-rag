@@ -153,16 +153,12 @@ Use a small suitable open-weight base model with a synthetic instruction dataset
 5. Fine-tuning code, synthetic data and evaluation methodology.
 6. README, test reports, 3–5-minute screen recording and submission email.
 
-## 13. Scoring rubric mapping
+## 13. Constraints and completion definition
 
-FastAPI/Python 20; local open-weight LLM 15; LoRA/QLoRA and evaluation 20; RAG and citations 15; pytest 15; security and injection defense 10; documentation 5. Total 100.
-
-## 14. Constraints and completion definition
-
-The previously discussed **HP ZBook G5** remains the documentation hardware reference. Development will currently use a **different Windows x64 PC** with Intel Core i7-1165G7 (11th Gen), 32 GB RAM, and unverified GPU. The current PC's make/model must not be inferred to be the ZBook. Lightweight quantized CPU inference is a reasonable starting approach; successful QLoRA execution must not be claimed without hardware verification. Corporate-machine policy must be respected. Nigeria-based contract eligibility remains unconfirmed.
+The previously discussed **HP ZBook G5** remains the documentation hardware reference. Development will currently use a **different Windows x64 PC** with Intel Core i7-1165G7 (11th Gen), 32 GB RAM, and unverified GPU. The current PC's make/model must not be inferred to be the ZBook. Lightweight quantized CPU inference is a reasonable starting approach; successful QLoRA execution must not be claimed without hardware verification.
 
 **Definition of done:** The local application executes; tenant isolation and prompt-injection tests pass; citations are verifiable; errors are honest; fine-tuning is executed and evaluated or explicitly labeled unexecuted; README contains exact tested setup; 3–5-minute recording shows real behavior; submission includes GitHub/ZIP link and requested engagement details.
 
-## 15. Disclosure
+## 14. Disclosure
 
-Initial product specification and scaffold prepared with ChatGPT assistance. All code must be independently verified, understood and demonstrated. No real customer data or fabricated test metrics.
+I wrote this specification and the initial scaffold with help from ChatGPT (OpenAI), and I built the implementation with Claude Code (Anthropic). I have verified and run everything I claim here; I report no metric I did not measure, and I label anything unexecuted as such. All data in this project is synthetic — no real customer, candidate or employee data is used anywhere. The full disclosure is in the README.
