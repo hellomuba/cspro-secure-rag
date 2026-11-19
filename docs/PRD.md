@@ -1,7 +1,7 @@
 # Product Requirements Document: AegisRAG
 
 **Subtitle:** Secure Local LLM & Multi-Tenant RAG Assessment  
-**Version:** 1.1 (assessment MVP, lightweight local model)  
+**Version:** 1.2 (assessment MVP, canonical local model `qwen3:0.6b`)  
 **Date:** 2026-11-18  
 **Maintainer:** Mubarak Ibrahim  
 **Repository:** `hellomuba/cspro-secure-rag`  
@@ -30,7 +30,7 @@ AegisRAG is a local-first, multi-tenant retrieval-augmented answering service bu
 | AC01 | FastAPI with GET /health, POST /ingest and POST /ask | Routes served and included in OpenAPI |
 | AC02 | Validate inputs and handle malformed requests | 422 errors and informative safe 4xx/5xx |
 | AC03 | At least 8 original synthetic records | >=2 tenants, older/current contradiction and forged instruction |
-| AC04 | Model uses local open-weight runtime | Ollama `qwen2.5:0.5b-instruct`; no paid inference |
+| AC04 | Model uses local open-weight runtime | Ollama `qwen3:0.6b`; no paid inference |
 | AC05 | Authenticated tenant isolation in code | Tenant A cannot retrieve, cite or output Tenant B canary |
 | AC06 | Evidence-grounded RAG | Authorized source IDs and exact excerpts, with abstention |
 | AC07 | Prompt-injection resistance | Malicious retrieved instructions ignored/quarantined |
@@ -122,7 +122,7 @@ The sample dataset contains five `tenant-a` records and four `tenant-b` records,
 
 ## 9. Local model & retrieval
 
-Model: `qwen2.5:0.5b-instruct` via Ollama, running locally at `http://localhost:11434`. Optional higher-quality comparison: `qwen2.5:1.5b-instruct`. MVP retrieval may use deterministic TF-IDF/BM25; embeddings are optional. Search over authorized records only; require a grounding threshold or abstain. Treat retrieved text as untrusted and reject model-only citation suggestions.
+Model: **`qwen3:0.6b`** via Ollama. Reached at `http://localhost:11434` when FastAPI runs natively on Windows, and at `http://ollama:11434` from inside the Docker Compose network. Optional documented alternatives, not defaults: `qwen2.5:0.5b-instruct` and `qwen2.5:1.5b-instruct`; set `LLM_MODEL` to switch. Nothing in the implementation is model-specific. MVP retrieval may use deterministic TF-IDF/BM25; embeddings are optional. Search over authorized records only; require a grounding threshold or abstain. Treat retrieved text as untrusted and reject model-only citation suggestions.
 
 ## 10. LoRA/QLoRA experiment
 

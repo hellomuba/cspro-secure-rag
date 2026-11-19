@@ -286,14 +286,19 @@ Three are relevant:
 
 | Model | Size | Role |
 |-------|------|------|
-| `qwen3:0.6b` | ~523 MB | **Configured default.** The model pulled and used on the development machine. |
-| `qwen2.5:0.5b-instruct` | ~398 MB | Named in [docs/PRD.md](docs/PRD.md) v1.1 as the lightweight default. |
-| `qwen2.5:1.5b-instruct` | ~986 MB | Optional higher-quality comparison. |
+| **`qwen3:0.6b`** | ~523 MB | **Canonical model.** Default in the code, the PRD, Compose and the demo. |
+| `qwen2.5:0.5b-instruct` | ~398 MB | Optional alternative. Not a default. |
+| `qwen2.5:1.5b-instruct` | ~986 MB | Optional alternative, higher quality. Not a default. |
 
-> **Discrepancy to settle before submission:** the PRD v1.1 names
-> `qwen2.5:0.5b-instruct`; the machine is configured for `qwen3:0.6b`. Both
-> work — set `LLM_MODEL` in `.env`. Pick one and make the PRD, the README and
-> the recording agree.
+To use an alternative, set `LLM_MODEL` in `.env` and pull that model instead.
+Nothing in the implementation is model-specific.
+
+**Endpoint depends on where FastAPI runs:**
+
+| FastAPI runs | `LLM_BASE_URL` |
+|--------------|----------------|
+| Natively on Windows | `http://localhost:11434` |
+| Inside Docker Compose | `http://ollama:11434` |
 
 Small quantized models are weaker at instruction-following and grounding than
 larger ones. That is precisely why the application does not trust the model:
@@ -328,9 +333,9 @@ ollama pull qwen3:0.6b
 ollama list
 ```
 
-> `qwen2.5:1.5b-instruct` (the model named in the PRD) also works — set
-> `LLM_MODEL=qwen2.5:1.5b-instruct` in `.env` and pull it instead. Nothing in
-> the code is specific to either model.
+> If an Ollama container is already serving `qwen3:0.6b` on
+> `127.0.0.1:11434`, use it — do not start a second one. Option A and the
+> Compose stack in section 7 are alternatives, not additions.
 
 ### 5.3 Run
 
@@ -402,9 +407,23 @@ assessment demo uses. Docker is an alternative, not a replacement.
 CPU-only, no GPU reservation — works on Docker Desktop for Windows with the
 WSL2 backend.
 
+**If you already run an Ollama container** serving `qwen3:0.6b` on
+`127.0.0.1:11434`, do **not** start a second one. Run the API alone:
+
+```powershell
+docker compose up -d --build api-only
+Invoke-RestMethod http://localhost:8000/health | ConvertTo-Json -Depth 5
+```
+
+That profile has no `ollama` service and reaches the existing runtime via
+`host.docker.internal:11434`. A second Ollama container would duplicate a
+multi-GB image, split the model volume and contend for port 11434.
+
+**Full stack** (only when no Ollama is running yet):
+
 ```powershell
 docker compose up -d --build
-docker compose exec ollama ollama pull qwen3:0.6b   # ~500 MB, one time
+docker compose exec ollama ollama pull qwen3:0.6b   # ~523 MB, one time
 docker compose ps                                    # wait for healthy
 Invoke-RestMethod http://localhost:8000/health | ConvertTo-Json -Depth 5
 ```

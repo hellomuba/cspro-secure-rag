@@ -7,6 +7,18 @@
 #
 # CPU-only by design: no GPU reservation is declared, so this runs on Docker
 # Desktop for Windows with the WSL2 backend without extra configuration.
+#
+# ---------------------------------------------------------------------------
+# ALREADY RUNNING AN OLLAMA CONTAINER?
+# ---------------------------------------------------------------------------
+# Do not start a second one. If a container is already serving qwen3:0.6b on
+# 127.0.0.1:11434, run the API alone and point it at the host:
+#
+#   docker compose up -d --build api-only
+#
+# That profile has no ollama service and reaches the existing runtime through
+# host.docker.internal. Two Ollama containers would duplicate a multi-GB image,
+# split the model volume, and contend for the same port.
 
 services:
   ollama:
@@ -59,6 +71,39 @@ services:
       LLM_MODEL: ${LLM_MODEL:-qwen3:0.6b}
       LLM_TIMEOUT_SECONDS: ${LLM_TIMEOUT_SECONDS:-120}
       # Override these in a local .env file; never commit real values.
+      TENANT_A_API_KEY: ${TENANT_A_API_KEY:-dev-a-change-me-0000000000}
+      TENANT_B_API_KEY: ${TENANT_B_API_KEY:-dev-b-change-me-1111111111}
+      DB_PATH: /data/aegisrag.sqlite3
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+    volumes:
+      - api-data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8000/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      start_period: 20s
+      retries: 5
+
+  # Same API image, but reusing an Ollama runtime that already exists on the
+  # host instead of starting a second container. Opt in explicitly:
+  #   docker compose up -d --build api-only
+  api-only:
+    profiles: ["api-only"]
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: aegisrag-compose-api-only
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8000:8000"
+    extra_hosts:
+      # Needed on Linux hosts; already resolvable on Docker Desktop.
+      - "host.docker.internal:host-gateway"
+    environment:
+      LLM_PROVIDER: ollama
+      LLM_BASE_URL: http://host.docker.internal:11434
+      LLM_MODEL: ${LLM_MODEL:-qwen3:0.6b}
+      LLM_TIMEOUT_SECONDS: ${LLM_TIMEOUT_SECONDS:-120}
       TENANT_A_API_KEY: ${TENANT_A_API_KEY:-dev-a-change-me-0000000000}
       TENANT_B_API_KEY: ${TENANT_B_API_KEY:-dev-b-change-me-1111111111}
       DB_PATH: /data/aegisrag.sqlite3
